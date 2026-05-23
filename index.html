@@ -1,0 +1,67 @@
+ <!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+    <!-- ── Default SEO (overridden by react-helmet-async) ── -->
+    <title>Loading...</title>
+    <meta name="description" content="Multi-client SaaS platform" />
+
+    <!-- ── Favicon (overridden per client) ───────────────── -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+
+    <!-- ── Preconnect to Google Fonts ────────────────────── -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      rel="preconnect"
+      href="https://fonts.gstatic.com"
+      crossorigin
+    />
+
+    <!-- ── Default Fonts (Inter) ─────────────────────────── -->
+    <!-- ThemeProvider will dynamically load client fonts -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- ── Theme Color (mobile browser UI) ───────────────── -->
+    <meta name="theme-color" content="#3B82F6" id="theme-color-meta" />
+
+    <!-- ── Open Graph defaults ───────────────────────────── -->
+    <meta property="og:type"  content="website" />
+    <meta property="og:title" content="SaaS Platform" />
+
+    <!-- ── Performance hints ─────────────────────────────── -->
+    <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+    <link rel="preconnect"   href="https://res.cloudinary.com" />
+  </head>
+
+  <body>
+    <!-- ── App Mount Point ───────────────────────────────── -->
+    <div id="root"></div>
+
+    <!-- ── No JS fallback ────────────────────────────────── -->
+    <noscript>
+      <div style="
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        font-family: sans-serif;
+        text-align: center;
+        padding: 2rem;
+      ">
+        <div>
+          <h1>JavaScript Required</h1>
+          <p>Please enable JavaScript to use this application.</p>
+        </div>
+      </div>
+    </noscript>
+
+    <!-- ── Vite Entry Point ───────────────────────────────── -->
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
