@@ -1,50 +1,44 @@
-import {
+ import {
   createContext,
   useContext,
   useState,
   useEffect,
   useCallback,
 } from "react";
-import clientService  from "@services/clientService.js";
-import themeService   from "@services/themeService.js";
+import clientService     from "@services/clientService.js";
+import themeService      from "@services/themeService.js";
 import { setClientSlug } from "@services/apiClient.js";
 
 // ─────────────────────────────────────────
-// CONTEXT CREATION
+// CONTEXT
 // ─────────────────────────────────────────
 
 const ClientContext = createContext(null);
 
 // ─────────────────────────────────────────
-// HELPER — Detect client slug
-// Priority:
-// 1. Subdomain (acme.youragency.com)
-// 2. Query param (?client=acme)
-// 3. localStorage (last used)
+// HELPER — Detect client slug from URL
 // ─────────────────────────────────────────
 
 const detectClientSlug = () => {
-  const hostname        = window.location.hostname;
-  const platformDomain  = import.meta.env.VITE_PLATFORM_DOMAIN
-    || "youragency.com";
+  const hostname       = window.location.hostname;
+  const platformDomain = import.meta.env.VITE_PLATFORM_DOMAIN || "youragency.com";
 
-  // ── Strategy 1: Subdomain ─────────────
+  // Strategy 1 — Subdomain
   if (hostname.endsWith(`.${platformDomain}`)) {
     const subdomain = hostname
       .replace(`.${platformDomain}`, "")
       .toLowerCase();
-
     if (subdomain && subdomain !== "www" && subdomain !== "admin") {
       return subdomain;
     }
   }
 
-  // ── Strategy 2: Query param ───────────
-  const params = new URLSearchParams(window.location.search);
+  // Strategy 2 — Query param
+  const params      = new URLSearchParams(window.location.search);
   const clientParam = params.get("client");
   if (clientParam) return clientParam;
 
-  // ── Strategy 3: localStorage ──────────
+  // Strategy 3 — localStorage
   const stored = localStorage.getItem("clientSlug");
   if (stored) return stored;
 
@@ -57,17 +51,15 @@ const detectClientSlug = () => {
 
 export const ClientProvider = ({ children }) => {
 
-  // ── State ────────────────────────────────
-  const [client,       setClient]       = useState(null);
-  const [theme,        setTheme]        = useState(null);
-  const [clientSlug,   setClientSlugState] = useState(null);
-  const [isLoading,    setIsLoading]    = useState(false);
-  const [error,        setError]        = useState(null);
-  const [themeApplied, setThemeApplied] = useState(false);
+  const [client,        setClient]        = useState(null);
+  const [theme,         setTheme]         = useState(null);
+  const [clientSlug,    setClientSlugState] = useState(null);
+  const [isLoading,     setIsLoading]     = useState(false);
+  const [error,         setError]         = useState(null);
+  const [themeApplied,  setThemeApplied]  = useState(false);
 
   // ─────────────────────────────────────────
-  // LOAD CLIENT CONFIG
-  // Fetches client + theme from backend
+  // LOAD BY SLUG
   // ─────────────────────────────────────────
 
   const loadClientConfig = useCallback(async (slug) => {
@@ -77,30 +69,26 @@ export const ClientProvider = ({ children }) => {
     setError(null);
 
     try {
-      // Set slug in axios defaults + localStorage
       setClientSlug(slug);
       setClientSlugState(slug);
 
-      // Fetch client config
       const response = await clientService.getConfig(slug);
 
-      if (response.data) {
+      if (response?.data) {
         const clientData = response.data;
         setClient(clientData);
 
-        // Apply theme if present
         if (clientData.theme) {
           setTheme(clientData.theme);
           themeService.applyTheme(clientData.theme);
           setThemeApplied(true);
         }
 
-        // Update page title
         if (clientData.name) {
-          document.title = clientData.seo?.metaTitle || clientData.name;
+          document.title =
+            clientData.seo?.metaTitle || clientData.name;
         }
 
-        // Update favicon
         if (clientData.favicon?.url) {
           const favicon = document.querySelector("link[rel='icon']");
           if (favicon) favicon.href = clientData.favicon.url;
@@ -108,7 +96,44 @@ export const ClientProvider = ({ children }) => {
       }
     } catch (err) {
       setError(err.message || "Failed to load client config");
-      console.error("Client config load failed:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // ─────────────────────────────────────────
+  // LOAD BY ID — Admin panel ke liye
+  // ─────────────────────────────────────────
+
+  const loadClientById = useCallback(async (id) => {
+    if (!id) return;
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await clientService.getClient(id);
+
+      if (response?.data) {
+        const clientData = response.data;
+        setClient(clientData);
+        setClientSlugState(clientData.slug);
+        setClientSlug(clientData.slug);
+
+        if (clientData.theme) {
+          setTheme(clientData.theme);
+          themeService.applyTheme(clientData.theme);
+          setThemeApplied(true);
+        }
+
+        if (clientData.name) {
+          document.title =
+            clientData.seo?.metaTitle || clientData.name;
+        }
+      }
+    } catch (err) {
+      console.error("Client load by ID failed:", err);
+      setError(err.message || "Failed to load client");
     } finally {
       setIsLoading(false);
     }
@@ -119,15 +144,46 @@ export const ClientProvider = ({ children }) => {
   // ─────────────────────────────────────────
 
   useEffect(() => {
-    const slug = detectClientSlug();
-    if (slug) {
-      loadClientConfig(slug);
-    }
-  }, [loadClientConfig]);
+    const initClient = async () => {
+      // Strategy 1 — URL se slug detect karo
+      const slugFromUrl = detectClientSlug();
+      if (slugFromUrl) {
+        await loadClientConfig(slugFromUrl);
+        return;
+      }
+
+      // Strategy 2 — localStorage se user check karo
+      try {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser) {
+          const parsedUser = JSON.parse(storedUser);
+
+          // User ke saath client linked hai
+          if (parsedUser?.client) {
+            const clientObj = parsedUser.client;
+
+            if (typeof clientObj === "object" && clientObj.slug) {
+              // Populated object — slug directly hai
+              await loadClientConfig(clientObj.slug);
+            } else if (typeof clientObj === "object" && clientObj._id) {
+              // Object with _id — ID se load karo
+              await loadClientById(clientObj._id);
+            } else if (typeof clientObj === "string") {
+              // Plain ObjectId string
+              await loadClientById(clientObj);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Client init from user failed:", err);
+      }
+    };
+
+    initClient();
+  }, [loadClientConfig, loadClientById]);
 
   // ─────────────────────────────────────────
-  // SWITCH CLIENT
-  // Used in admin panel to switch context
+  // ACTIONS
   // ─────────────────────────────────────────
 
   const switchClient = useCallback(async (slug) => {
@@ -135,29 +191,14 @@ export const ClientProvider = ({ children }) => {
     await loadClientConfig(slug);
   }, [loadClientConfig]);
 
-  // ─────────────────────────────────────────
-  // UPDATE THEME
-  // Called after theme change in admin
-  // ─────────────────────────────────────────
-
   const updateTheme = useCallback((newTheme) => {
     setTheme(newTheme);
     themeService.applyTheme(newTheme);
   }, []);
 
-  // ─────────────────────────────────────────
-  // UPDATE CLIENT
-  // Called after client update in admin
-  // ─────────────────────────────────────────
-
   const updateClient = useCallback((updatedClient) => {
     setClient(updatedClient);
   }, []);
-
-  // ─────────────────────────────────────────
-  // REFRESH CLIENT CONFIG
-  // Force re-fetch from backend
-  // ─────────────────────────────────────────
 
   const refreshClient = useCallback(() => {
     if (clientSlug) {
@@ -170,25 +211,21 @@ export const ClientProvider = ({ children }) => {
   // ─────────────────────────────────────────
 
   const value = {
-    // State
     client,
     theme,
     clientSlug,
     isLoading,
     error,
     themeApplied,
-
-    // Computed
-    clientId:   client?._id || null,
-    clientName: client?.name || "",
-    logo:       client?.logo || null,
+    clientId:   client?._id   || null,
+    clientName: client?.name  || "",
+    logo:       client?.logo  || null,
     contact:    client?.contact || {},
-    social:     client?.social || {},
-    seo:        client?.seo || {},
-    plan:       client?.plan || "free",
-
-    // Actions
+    social:     client?.social  || {},
+    seo:        client?.seo     || {},
+    plan:       client?.plan    || "free",
     loadClientConfig,
+    loadClientById,
     switchClient,
     updateTheme,
     updateClient,
@@ -203,7 +240,7 @@ export const ClientProvider = ({ children }) => {
 };
 
 // ─────────────────────────────────────────
-// CUSTOM HOOK
+// HOOK
 // ─────────────────────────────────────────
 
 export const useClient = () => {

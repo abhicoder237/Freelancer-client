@@ -11,28 +11,18 @@ import authService     from "@services/authService.js";
 import { setAuthToken, clearAuthData } from "@services/apiClient.js";
 import { ROUTES }      from "@constants/api.js";
 
-// ─────────────────────────────────────────
-// CONTEXT CREATION
-// ─────────────────────────────────────────
-
 const AuthContext = createContext(null);
-
-// ─────────────────────────────────────────
-// AUTH PROVIDER
-// ─────────────────────────────────────────
 
 export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
 
-  // ── State ────────────────────────────────
-  const [user,        setUser]        = useState(null);
-  const [token,       setToken]       = useState(null);
-  const [isLoading,   setIsLoading]   = useState(true);
-  const [isLoggedIn,  setIsLoggedIn]  = useState(false);
+  const [user,       setUser]       = useState(null);
+  const [token,      setToken]      = useState(null);
+  const [isLoading,  setIsLoading]  = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   // ─────────────────────────────────────────
   // INITIALIZE AUTH
-  // Check localStorage on app start
   // ─────────────────────────────────────────
 
   useEffect(() => {
@@ -42,21 +32,22 @@ export const AuthProvider = ({ children }) => {
         const storedUser  = authService.getStoredUser();
 
         if (storedToken && storedUser) {
-          // Set token in axios defaults
           setAuthToken(storedToken);
           setToken(storedToken);
           setUser(storedUser);
           setIsLoggedIn(true);
 
-          // Verify token is still valid — fetch fresh user data
+          // Verify token still valid
           try {
             const response = await authService.getMe();
-            if (response.data) {
+            if (response?.data) {
               setUser(response.data);
-              localStorage.setItem("user", JSON.stringify(response.data));
+              localStorage.setItem(
+                "user",
+                JSON.stringify(response.data)
+              );
             }
           } catch {
-            // Token invalid — clear everything
             handleLogout(false);
           }
         }
@@ -79,25 +70,16 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authService.login(credentials);
 
-      if (response.data) {
+      if (response?.data) {
         const { user: loggedInUser, token: accessToken } = response.data;
 
-        // Update state
         setUser(loggedInUser);
         setToken(accessToken);
         setIsLoggedIn(true);
 
         toast.success(`Welcome back, ${loggedInUser.name}! 👋`);
 
-        // Redirect based on role
-        if (
-          loggedInUser.role === "superadmin" ||
-          loggedInUser.role === "admin"
-        ) {
-          navigate(ROUTES.ADMIN_DASHBOARD);
-        } else if (loggedInUser.role === "clientadmin") {
-          navigate(ROUTES.ADMIN_DASHBOARD);
-        }
+        navigate(ROUTES.ADMIN_DASHBOARD);
 
         return { success: true, user: loggedInUser };
       }
@@ -119,9 +101,8 @@ export const AuthProvider = ({ children }) => {
     try {
       await authService.logout();
     } catch {
-      // Still clear local data even if API fails
+      // Still clear local data
     } finally {
-      // Clear all state
       setUser(null);
       setToken(null);
       setIsLoggedIn(false);
@@ -136,7 +117,7 @@ export const AuthProvider = ({ children }) => {
   }, [navigate]);
 
   // ─────────────────────────────────────────
-  // UPDATE USER (after profile update)
+  // UPDATE USER
   // ─────────────────────────────────────────
 
   const updateUser = useCallback((updatedUser) => {
@@ -148,9 +129,9 @@ export const AuthProvider = ({ children }) => {
   // ROLE HELPERS
   // ─────────────────────────────────────────
 
-  const isSuperAdmin  = user?.role === "superadmin";
-  const isAdmin       = user?.role === "admin";
-  const isClientAdmin = user?.role === "clientadmin";
+  const isSuperAdmin   = user?.role === "superadmin";
+  const isAdmin        = user?.role === "admin";
+  const isClientAdmin  = user?.role === "clientadmin";
   const isAdminOrAbove = isSuperAdmin || isAdmin;
 
   const hasRole = useCallback((...roles) => {
@@ -158,30 +139,45 @@ export const AuthProvider = ({ children }) => {
   }, [user]);
 
   // ─────────────────────────────────────────
+  // GET CLIENT SLUG FROM USER
+  // ─────────────────────────────────────────
+
+  const getUserClientSlug = useCallback(() => {
+    if (!user?.client) return null;
+    if (typeof user.client === "object") {
+      return user.client.slug || null;
+    }
+    return null;
+  }, [user]);
+
+  const getUserClientId = useCallback(() => {
+    if (!user?.client) return null;
+    if (typeof user.client === "object") {
+      return user.client._id || user.client.toString();
+    }
+    return user.client.toString();
+  }, [user]);
+
+  // ─────────────────────────────────────────
   // CONTEXT VALUE
   // ─────────────────────────────────────────
 
   const value = {
-    // State
     user,
     token,
     isLoading,
     isLoggedIn,
-
-    // Actions
     login,
-    logout:     handleLogout,
+    logout:           handleLogout,
     updateUser,
-
-    // Role helpers
     isSuperAdmin,
     isAdmin,
     isClientAdmin,
     isAdminOrAbove,
     hasRole,
-
-    // User client ID (for clientadmin)
-    userClientId: user?.client?._id || user?.client || null,
+    getUserClientSlug,
+    getUserClientId,
+    userClientId:     getUserClientId(),
   };
 
   return (
@@ -190,10 +186,6 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
-
-// ─────────────────────────────────────────
-// CUSTOM HOOK
-// ─────────────────────────────────────────
 
 export const useAuth = () => {
   const context = useContext(AuthContext);

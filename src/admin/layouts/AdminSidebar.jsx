@@ -1,56 +1,56 @@
-import { NavLink }   from "react-router-dom";
+ import { NavLink }   from "react-router-dom";
 import { useAuth }   from "@context/AuthContext.jsx";
 import { useClient } from "@context/ClientContext.jsx";
 import { cn }        from "@utils/helpers.js";
 import { ROUTES }    from "@constants/api.js";
 
 // ─────────────────────────────────────────
-// NAV ITEMS CONFIG
+// NAV ITEMS
 // ─────────────────────────────────────────
 
 const getNavItems = (role) => {
   const items = [
     {
-      label:  "Dashboard",
-      to:     ROUTES.ADMIN_DASHBOARD,
-      icon:   "📊",
-      roles:  ["superadmin", "admin", "clientadmin"],
+      label: "Dashboard",
+      to:    ROUTES.ADMIN_DASHBOARD,
+      icon:  "📊",
+      roles: ["superadmin", "admin", "clientadmin"],
     },
     {
-      label:  "Clients",
-      to:     ROUTES.ADMIN_CLIENTS,
-      icon:   "🏢",
-      roles:  ["superadmin", "admin"],
+      label: "Clients",
+      to:    ROUTES.ADMIN_CLIENTS,
+      icon:  "🏢",
+      roles: ["superadmin", "admin"],
     },
     {
-      label:  "Products",
-      to:     ROUTES.ADMIN_PRODUCTS,
-      icon:   "📦",
-      roles:  ["superadmin", "admin", "clientadmin"],
+      label: "Products",
+      to:    ROUTES.ADMIN_PRODUCTS,
+      icon:  "📦",
+      roles: ["superadmin", "admin", "clientadmin"],
     },
     {
-      label:  "Themes",
-      to:     ROUTES.ADMIN_THEMES,
-      icon:   "🎨",
-      roles:  ["superadmin", "admin", "clientadmin"],
+      label: "Themes",
+      to:    ROUTES.ADMIN_THEMES,
+      icon:  "🎨",
+      roles: ["superadmin", "admin", "clientadmin"],
     },
     {
-      label:  "Sections",
-      to:     ROUTES.ADMIN_SECTIONS,
-      icon:   "🧩",
-      roles:  ["superadmin", "admin", "clientadmin"],
+      label: "Sections",
+      to:    ROUTES.ADMIN_SECTIONS,
+      icon:  "🧩",
+      roles: ["superadmin", "admin", "clientadmin"],
     },
     {
-      label:  "Users",
-      to:     ROUTES.ADMIN_USERS,
-      icon:   "👥",
-      roles:  ["superadmin"],
+      label: "Users",
+      to:    ROUTES.ADMIN_USERS,
+      icon:  "👥",
+      roles: ["superadmin"],
     },
     {
-      label:  "Settings",
-      to:     ROUTES.ADMIN_SETTINGS,
-      icon:   "⚙️",
-      roles:  ["superadmin", "admin", "clientadmin"],
+      label: "Settings",
+      to:    ROUTES.ADMIN_SETTINGS,
+      icon:  "⚙️",
+      roles: ["superadmin", "admin", "clientadmin"],
     },
   ];
 
@@ -58,22 +58,41 @@ const getNavItems = (role) => {
 };
 
 // ─────────────────────────────────────────
+// GET VIEW SITE URL
+// ─────────────────────────────────────────
+
+const getViewSiteUrl = (client, clientSlug, user) => {
+  const slug =
+    clientSlug           ||
+    client?.slug         ||
+    (typeof user?.client === "object" ? user?.client?.slug : null) ||
+    null;
+
+  if (!slug) return null;
+
+  const baseUrl =
+    import.meta.env.VITE_SITE_URL ||
+    window.location.origin;
+
+  return `${baseUrl}/?client=${slug}`;
+};
+
+// ─────────────────────────────────────────
 // ADMIN SIDEBAR
 // ─────────────────────────────────────────
 
 const AdminSidebar = ({ isOpen, mobileOpen, onMobileClose }) => {
-  const { user, isSuperAdmin } = useAuth();
-  const { client, logo }       = useClient();
-
-  const navItems = getNavItems(user?.role);
+  const { user }               = useAuth();
+  const { client, logo, clientSlug } = useClient();
+  const navItems               = getNavItems(user?.role);
 
   return (
     <>
-      {/* Desktop Sidebar */}
+      {/* Desktop */}
       <aside
         className={cn(
           "fixed top-0 left-0 h-full bg-background border-r border-border",
-          "flex flex-col transition-all duration-300 z-30",
+          "flex-col transition-all duration-300 z-30",
           "hidden lg:flex",
           isOpen ? "w-64" : "w-20"
         )}
@@ -83,11 +102,12 @@ const AdminSidebar = ({ isOpen, mobileOpen, onMobileClose }) => {
           navItems={navItems}
           user={user}
           client={client}
+          clientSlug={clientSlug}
           logo={logo}
         />
       </aside>
 
-      {/* Mobile Sidebar */}
+      {/* Mobile */}
       <aside
         className={cn(
           "fixed top-0 left-0 h-full w-64 bg-background border-r border-border",
@@ -100,6 +120,7 @@ const AdminSidebar = ({ isOpen, mobileOpen, onMobileClose }) => {
           navItems={navItems}
           user={user}
           client={client}
+          clientSlug={clientSlug}
           logo={logo}
           onClose={onMobileClose}
         />
@@ -117,39 +138,35 @@ const SidebarContent = ({
   navItems,
   user,
   client,
+  clientSlug,
   logo,
   onClose,
 }) => {
+  const viewSiteUrl = getViewSiteUrl(client, clientSlug, user);
+
   return (
     <>
       {/* Logo / Brand */}
-      <div className={cn(
-        "flex items-center gap-3 p-4 border-b border-border",
-        "h-16 shrink-0",
-        !isOpen && "justify-center"
-      )}>
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "1rem", borderBottom: "1px solid var(--color-border)", height: "4rem", flexShrink: 0, justifyContent: !isOpen ? "center" : "flex-start" }}>
 
-        {/* Logo */}
         {logo?.url ? (
           <img
             src={logo.url}
             alt={logo.altText || "Logo"}
-            className="w-8 h-8 object-contain rounded"
+            style={{ width: "2rem", height: "2rem", objectFit: "contain", borderRadius: "4px" }}
           />
         ) : (
-          <div className="w-8 h-8 bg-primary rounded-lg flex
-                          items-center justify-center text-white
-                          font-bold text-sm shrink-0">
+          <div style={{ width: "2rem", height: "2rem", background: "var(--color-primary)", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: "bold", fontSize: "0.875rem", flexShrink: 0 }}>
             {client?.name?.[0] || "S"}
           </div>
         )}
 
         {isOpen && (
-          <div className="overflow-hidden">
-            <p className="font-bold text-text-primary text-sm truncate">
+          <div style={{ overflow: "hidden" }}>
+            <p style={{ fontWeight: "bold", color: "var(--color-text-primary)", fontSize: "0.9rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {client?.name || "SaaS Platform"}
             </p>
-            <p className="text-xs text-text-secondary truncate">
+            <p style={{ fontSize: "0.7rem", color: "var(--color-text-secondary)" }}>
               Admin Panel
             </p>
           </div>
@@ -157,27 +174,36 @@ const SidebarContent = ({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4 px-2">
-        <ul className="space-y-1">
+      <nav style={{ flex: 1, overflowY: "auto", padding: "0.75rem 0.5rem" }}>
+        <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: "2px" }}>
           {navItems.map((item) => (
             <li key={item.to}>
               <NavLink
                 to={item.to}
-                className={({ isActive }) =>
-                  cn(
-                    "flex items-center gap-3 px-3 py-2.5 rounded-lg",
-                    "transition-colors duration-150 group",
-                    !isOpen && "justify-center",
-                    isActive
-                      ? "bg-primary text-white"
-                      : "text-text-secondary hover:bg-surface hover:text-text-primary"
-                  )
-                }
+                onClick={onClose}
                 title={!isOpen ? item.label : ""}
+                style={({ isActive }) => ({
+                  display:        "flex",
+                  alignItems:     "center",
+                  gap:            "0.75rem",
+                  padding:        "0.625rem 0.75rem",
+                  borderRadius:   "8px",
+                  textDecoration: "none",
+                  transition:     "all 0.15s",
+                  justifyContent: !isOpen ? "center" : "flex-start",
+                  background:     isActive
+                    ? "var(--color-primary)"
+                    : "transparent",
+                  color: isActive
+                    ? "#ffffff"
+                    : "var(--color-text-secondary)",
+                })}
               >
-                <span className="text-lg shrink-0">{item.icon}</span>
+                <span style={{ fontSize: "1.1rem", flexShrink: 0 }}>
+                  {item.icon}
+                </span>
                 {isOpen && (
-                  <span className="text-sm font-medium">
+                  <span style={{ fontSize: "0.875rem", fontWeight: "500" }}>
                     {item.label}
                   </span>
                 )}
@@ -185,35 +211,39 @@ const SidebarContent = ({
             </li>
           ))}
         </ul>
+
+        {/* View Site in sidebar */}
+        {isOpen && viewSiteUrl && (
+          <div style={{ marginTop: "0.75rem", paddingTop: "0.75rem", borderTop: "1px solid var(--color-border)" }}>
+            <button
+              onClick={() => window.open(viewSiteUrl, "_blank")}
+              style={{ display: "flex", alignItems: "center", gap: "0.75rem", padding: "0.625rem 0.75rem", borderRadius: "8px", border: "1px solid var(--color-border)", background: "transparent", cursor: "pointer", width: "100%", color: "var(--color-text-secondary)", fontSize: "0.875rem", fontWeight: "500" }}
+            >
+              <span>🌐</span>
+              <span>View Website</span>
+            </button>
+          </div>
+        )}
       </nav>
 
-      {/* User info at bottom */}
-      <div className={cn(
-        "p-4 border-t border-border shrink-0",
-        !isOpen && "flex justify-center"
-      )}>
+      {/* User info */}
+      <div style={{ padding: "0.75rem", borderTop: "1px solid var(--color-border)", flexShrink: 0, display: "flex", justifyContent: !isOpen ? "center" : "flex-start" }}>
         {isOpen ? (
-          <div className="flex items-center gap-3">
-            {/* Avatar */}
-            <div className="w-8 h-8 rounded-full bg-primary flex
-                            items-center justify-center text-white
-                            text-xs font-bold shrink-0">
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <div style={{ width: "2rem", height: "2rem", borderRadius: "50%", background: "var(--color-primary)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: "bold", fontSize: "0.75rem", flexShrink: 0 }}>
               {user?.name?.[0]?.toUpperCase() || "U"}
             </div>
-
-            <div className="overflow-hidden flex-1">
-              <p className="text-sm font-medium text-text-primary truncate">
+            <div style={{ overflow: "hidden", flex: 1 }}>
+              <p style={{ fontSize: "0.8rem", fontWeight: "500", color: "var(--color-text-primary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                 {user?.name}
               </p>
-              <p className="text-xs text-text-secondary capitalize">
+              <p style={{ fontSize: "0.7rem", color: "var(--color-text-secondary)", textTransform: "capitalize" }}>
                 {user?.role}
               </p>
             </div>
           </div>
         ) : (
-          <div className="w-8 h-8 rounded-full bg-primary flex
-                          items-center justify-center text-white
-                          text-xs font-bold">
+          <div style={{ width: "2rem", height: "2rem", borderRadius: "50%", background: "var(--color-primary)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: "bold", fontSize: "0.75rem" }}>
             {user?.name?.[0]?.toUpperCase() || "U"}
           </div>
         )}
