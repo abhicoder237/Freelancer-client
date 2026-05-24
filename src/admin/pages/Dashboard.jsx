@@ -1,5 +1,4 @@
 import { useQuery }          from "@tanstack/react-query";
-import { useAuth } from "@context/AuthContext.jsx"
 import { useAuth }           from "@context/AuthContext.jsx";
 import { useClient }         from "@context/ClientContext.jsx";
 import { SkeletonBox }       from "@components/Loader.jsx";
@@ -162,26 +161,6 @@ const CategoryBar = ({ category, count, total }) => {
 const Dashboard = () => {
   const { user, isSuperAdmin, isAdminOrAbove } = useAuth();
   const { client, clientId, clientSlug }       = useClient();
-  const { user, isAdminOrAbove } = useAuth();
-const { client, clientId, clientSlug } = useClient();
-
-const getViewSiteUrl = () => {
-  const slug =
-    clientSlug          ||
-    client?.slug        ||
-    (typeof user?.client === "object" ? user?.client?.slug : null) ||
-    null;
-
-  if (!slug) return null;
-
-  const baseUrl =
-    import.meta.env.VITE_SITE_URL ||
-    window.location.origin;
-
-  return `${baseUrl}/?client=${slug}`;
-};
-
-const viewSiteUrl = getViewSiteUrl();
 
   // ── Fetch stats ──────────────────────────
   const {
@@ -275,17 +254,6 @@ const viewSiteUrl = getViewSiteUrl();
             </div>
 
             {/* View site link */}
-
-            {/* View site link */}
-{viewSiteUrl && (
-  <button
-    onClick={() => window.open(viewSiteUrl, "_blank")}
-    style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.625rem 1.25rem", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "0.875rem", fontWeight: "600" }}
-  >
-    <span>🌐</span>
-    <span>View Website</span>
-  </button>
-)}
             
               
           </div>
