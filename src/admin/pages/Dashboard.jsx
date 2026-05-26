@@ -12,6 +12,26 @@ import {
 }                            from "@utils/helpers.js";
 
 // ─────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────
+
+const getViewSiteUrl = (client, clientSlug, user) => {
+  const slug =
+    clientSlug          ||
+    client?.slug        ||
+    (typeof user?.client === "object" ? user?.client?.slug : null) ||
+    null;
+
+  if (!slug) return null;
+
+  const baseUrl =
+    import.meta.env.VITE_SITE_URL ||
+    window.location.origin;
+
+  return `${baseUrl}/?client=${slug}`;
+};
+
+// ─────────────────────────────────────────
 // STAT CARD
 // ─────────────────────────────────────────
 
@@ -24,25 +44,28 @@ const StatCard = ({
   color = "primary",
 }) => {
   const colors = {
-    primary: "bg-blue-50   text-blue-600",
-    success: "bg-green-50  text-green-600",
-    warning: "bg-yellow-50 text-yellow-600",
-    error:   "bg-red-50    text-red-600",
-    purple:  "bg-purple-50 text-purple-600",
+    primary: "background: #EFF6FF; color: #2563EB;",
+    success: "background: #F0FDF4; color: #16A34A;",
+    warning: "background: #FFFBEB; color: #D97706;",
+    error:   "background: #FEF2F2; color: #DC2626;",
+    purple:  "background: #F5F3FF; color: #7C3AED;",
   };
 
+  const colorStyle = colors[color] || colors.primary;
+
   return (
-    <div className="card hover:shadow-card-hover transition-all duration-200">
-      <div className="flex items-start justify-between mb-4">
-        {/* Icon */}
-        <div className={`
-          w-12 h-12 rounded-xl flex items-center
-          justify-center text-2xl ${colors[color]}
-        `}>
-          {icon}
+    <div
+      style={{ background: "var(--color-background)", border: "1px solid var(--color-border)", borderRadius: "12px", padding: "1.25rem", transition: "box-shadow 0.2s" }}
+      onMouseEnter={(e) => e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.08)"}
+      onMouseLeave={(e) => e.currentTarget.style.boxShadow = "none"}
+    >
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "1rem" }}>
+        <div style={{ width: "3rem", height: "3rem", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", cssText: colorStyle }}>
+          <div style={{ width: "3rem", height: "3rem", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", ...(color === "primary" ? { background: "#EFF6FF" } : color === "success" ? { background: "#F0FDF4" } : color === "warning" ? { background: "#FFFBEB" } : color === "error" ? { background: "#FEF2F2" } : { background: "#F5F3FF" }) }}>
+            {icon}
+          </div>
         </div>
 
-        {/* Trend badge */}
         {trend !== undefined && (
           <Badge variant={trend >= 0 ? "success" : "error"}>
             {trend >= 0 ? "↑" : "↓"} {Math.abs(trend)}%
@@ -50,19 +73,14 @@ const StatCard = ({
         )}
       </div>
 
-      {/* Value */}
-      <p className="text-3xl font-bold text-text-primary mb-1">
+      <p style={{ fontSize: "1.875rem", fontWeight: "bold", color: "var(--color-text-primary)", marginBottom: "0.25rem" }}>
         {value}
       </p>
-
-      {/* Title */}
-      <p className="text-sm font-medium text-text-primary">
+      <p style={{ fontSize: "0.875rem", fontWeight: "500", color: "var(--color-text-primary)" }}>
         {title}
       </p>
-
-      {/* Subtitle */}
       {subtitle && (
-        <p className="text-xs text-text-secondary mt-1">
+        <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", marginTop: "0.25rem" }}>
           {subtitle}
         </p>
       )}
@@ -75,11 +93,11 @@ const StatCard = ({
 // ─────────────────────────────────────────
 
 const StatCardSkeleton = () => (
-  <div className="card space-y-3">
-    <SkeletonBox className="w-12 h-12 rounded-xl" />
-    <SkeletonBox className="h-8 w-24" />
-    <SkeletonBox className="h-4 w-32" />
-    <SkeletonBox className="h-3 w-24" />
+  <div style={{ background: "var(--color-background)", border: "1px solid var(--color-border)", borderRadius: "12px", padding: "1.25rem" }}>
+    <SkeletonBox style={{ width: "3rem", height: "3rem", borderRadius: "10px", marginBottom: "1rem" }} />
+    <SkeletonBox style={{ height: "2rem", width: "6rem", marginBottom: "0.5rem", borderRadius: "4px" }} />
+    <SkeletonBox style={{ height: "1rem", width: "8rem", marginBottom: "0.25rem", borderRadius: "4px" }} />
+    <SkeletonBox style={{ height: "0.75rem", width: "5rem", borderRadius: "4px" }} />
   </div>
 );
 
@@ -88,66 +106,64 @@ const StatCardSkeleton = () => (
 // ─────────────────────────────────────────
 
 const QuickAction = ({ icon, label, description, onClick, color }) => {
-  const colors = {
-    blue:   "hover:border-blue-300   hover:bg-blue-50",
-    green:  "hover:border-green-300  hover:bg-green-50",
-    purple: "hover:border-purple-300 hover:bg-purple-50",
-    orange: "hover:border-orange-300 hover:bg-orange-50",
+  const hoverColors = {
+    blue:   { borderColor: "#93C5FD", background: "#EFF6FF" },
+    green:  { borderColor: "#86EFAC", background: "#F0FDF4" },
+    purple: { borderColor: "#C4B5FD", background: "#F5F3FF" },
+    orange: { borderColor: "#FCA5A5", background: "#FFF1F2" },
   };
+
+  const hoverStyle = hoverColors[color] || hoverColors.blue;
 
   return (
     <button
       onClick={onClick}
-      className={`
-        w-full text-left p-4 rounded-xl border border-border
-        transition-all duration-200 group
-        ${colors[color] || colors.blue}
-      `}
+      style={{ width: "100%", textAlign: "left", padding: "1rem", borderRadius: "10px", border: "1px solid var(--color-border)", background: "transparent", cursor: "pointer", transition: "all 0.2s" }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor  = hoverStyle.borderColor;
+        e.currentTarget.style.background   = hoverStyle.background;
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor  = "var(--color-border)";
+        e.currentTarget.style.background   = "transparent";
+      }}
     >
-      <div className="flex items-center gap-3">
-        <span className="text-2xl">{icon}</span>
-        <div>
-          <p className="text-sm font-semibold text-text-primary
-                        group-hover:text-primary transition-colors">
+      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        <span style={{ fontSize: "1.5rem" }}>{icon}</span>
+        <div style={{ flex: 1 }}>
+          <p style={{ fontSize: "0.875rem", fontWeight: "600", color: "var(--color-text-primary)", marginBottom: "0.125rem" }}>
             {label}
           </p>
-          <p className="text-xs text-text-secondary mt-0.5">
+          <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>
             {description}
           </p>
         </div>
-        <span className="ml-auto text-text-secondary
-                         group-hover:text-primary transition-colors">
-          →
-        </span>
+        <span style={{ color: "var(--color-text-secondary)", fontSize: "1rem" }}>→</span>
       </div>
     </button>
   );
 };
 
 // ─────────────────────────────────────────
-// CATEGORY BREAKDOWN
+// CATEGORY BAR
 // ─────────────────────────────────────────
 
 const CategoryBar = ({ category, count, total }) => {
-  const percent = total > 0
-    ? Math.round((count / total) * 100)
-    : 0;
+  const percent = total > 0 ? Math.round((count / total) * 100) : 0;
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex justify-between text-sm">
-        <span className="text-text-primary font-medium capitalize">
+    <div style={{ marginBottom: "0.875rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.375rem" }}>
+        <span style={{ fontSize: "0.875rem", fontWeight: "500", color: "var(--color-text-primary)", textTransform: "capitalize" }}>
           {category}
         </span>
-        <span className="text-text-secondary">
+        <span style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)" }}>
           {count} ({percent}%)
         </span>
       </div>
-      <div className="h-2 bg-surface rounded-full overflow-hidden">
+      <div style={{ height: "0.5rem", background: "var(--color-surface)", borderRadius: "999px", overflow: "hidden" }}>
         <div
-          className="h-full bg-primary rounded-full
-                     transition-all duration-500"
-          style={{ width: `${percent}%` }}
+          style={{ height: "100%", background: "var(--color-primary)", borderRadius: "999px", width: percent + "%", transition: "width 0.5s ease" }}
         />
       </div>
     </div>
@@ -159,8 +175,11 @@ const CategoryBar = ({ category, count, total }) => {
 // ─────────────────────────────────────────
 
 const Dashboard = () => {
-  const { user, isSuperAdmin, isAdminOrAbove } = useAuth();
+  const { user, isAdminOrAbove }               = useAuth();
   const { client, clientId, clientSlug }       = useClient();
+
+  // ── View site URL ─────────────────────────
+  const viewSiteUrl = getViewSiteUrl(client, clientSlug, user);
 
   // ── Fetch stats ──────────────────────────
   const {
@@ -172,12 +191,12 @@ const Dashboard = () => {
     queryKey: QUERY_KEYS.CLIENT_STATS(clientId),
     queryFn:  () => clientService.getStats(clientId),
     enabled:  !!clientId,
-    refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes
+    refetchInterval: 5 * 60 * 1000,
   });
 
   const stats = statsResponse?.data || null;
 
-  // ── Current time greeting ────────────────
+  // ── Greeting ─────────────────────────────
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return "Good morning";
@@ -186,27 +205,22 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="space-y-8 animate-fade-up">
+    <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
 
       {/* ── Header ──────────────────────── */}
-      <div className="flex items-start justify-between">
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">
+          <h1 style={{ fontSize: "1.5rem", fontWeight: "bold", color: "var(--color-text-primary)", marginBottom: "0.25rem" }}>
             {getGreeting()}, {user?.name?.split(" ")[0]} 👋
           </h1>
-          <p className="text-text-secondary mt-1">
-            {client
-              ? `Managing ${client.name}`
-              : "Welcome to your dashboard"
-            }
+          <p style={{ color: "var(--color-text-secondary)", fontSize: "0.875rem" }}>
+            {client ? `Managing ${client.name}` : "Welcome to your dashboard"}
           </p>
         </div>
 
-        {/* Refresh button */}
         <button
           onClick={() => refetch()}
-          className="p-2 text-text-secondary hover:text-primary
-                     hover:bg-surface rounded-lg transition-colors"
+          style={{ padding: "0.5rem", color: "var(--color-text-secondary)", background: "transparent", border: "none", cursor: "pointer", borderRadius: "8px", fontSize: "1.1rem" }}
           title="Refresh stats"
         >
           🔄
@@ -215,34 +229,29 @@ const Dashboard = () => {
 
       {/* ── Client Info Banner ───────────── */}
       {client && (
-        <div className="bg-gradient-to-r from-primary/10 to-secondary/10
-                        border border-primary/20 rounded-2xl p-5">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-4">
+        <div style={{ background: "linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 10%, transparent), color-mix(in srgb, var(--color-secondary) 10%, transparent))", border: "1px solid color-mix(in srgb, var(--color-primary) 20%, transparent)", borderRadius: "16px", padding: "1.25rem" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
               {/* Logo */}
               {client.logo?.url ? (
                 <img
                   src={client.logo.url}
                   alt={client.name}
-                  className="w-12 h-12 rounded-xl object-contain
-                             bg-white p-1 border border-border"
+                  style={{ width: "3rem", height: "3rem", borderRadius: "10px", objectFit: "contain", background: "#fff", padding: "4px", border: "1px solid var(--color-border)" }}
                 />
               ) : (
-                <div className="w-12 h-12 rounded-xl bg-primary
-                                flex items-center justify-center
-                                text-white text-xl font-bold">
+                <div style={{ width: "3rem", height: "3rem", borderRadius: "10px", background: "var(--color-primary)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: "bold", fontSize: "1.25rem" }}>
                   {client.name?.[0]}
                 </div>
               )}
 
               <div>
-                <h2 className="font-bold text-text-primary text-lg">
+                <h2 style={{ fontSize: "1.1rem", fontWeight: "bold", color: "var(--color-text-primary)", marginBottom: "0.375rem" }}>
                   {client.name}
                 </h2>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="primary">
-                    {getPlanLabel(client.plan)}
-                  </Badge>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
+                  <Badge variant="primary">{getPlanLabel(client.plan)}</Badge>
                   <Badge variant={client.isActive ? "success" : "error"}>
                     {client.isActive ? "Active" : "Inactive"}
                   </Badge>
@@ -253,32 +262,41 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* View site link */}
-            
-              
+            {/* View Website button */}
+            {viewSiteUrl && (
+              <button
+                onClick={() => window.open(viewSiteUrl, "_blank")}
+                style={{ display: "flex", alignItems: "center", gap: "0.5rem", padding: "0.625rem 1.25rem", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "0.875rem", fontWeight: "600", transition: "filter 0.2s" }}
+                onMouseEnter={(e) => e.currentTarget.style.filter = "brightness(0.9)"}
+                onMouseLeave={(e) => e.currentTarget.style.filter = "brightness(1)"}
+              >
+                <span>🌐</span>
+                <span>View Website</span>
+              </button>
+            )}
           </div>
         </div>
       )}
 
       {/* ── Stats Grid ──────────────────── */}
       <div>
-        <h2 className="text-lg font-semibold text-text-primary mb-4">
+        <h2 style={{ fontSize: "1rem", fontWeight: "600", color: "var(--color-text-primary)", marginBottom: "1rem" }}>
           Overview
         </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2
-                        lg:grid-cols-4 gap-4">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem" }}>
           {isStatsLoading ? (
-            // Skeleton loading
-            [...Array(4)].map((_, i) => (
-              <StatCardSkeleton key={i} />
-            ))
+            [...Array(4)].map((_, i) => <StatCardSkeleton key={i} />)
           ) : statsError ? (
-            // Error state
-            <div className="col-span-4 text-center py-8
-                            text-text-secondary">
-              <p className="text-4xl mb-2">😕</p>
-              <p>Failed to load stats. Please refresh.</p>
+            <div style={{ gridColumn: "1 / -1", textAlign: "center", padding: "3rem", color: "var(--color-text-secondary)" }}>
+              <p style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>😕</p>
+              <p>Failed to load stats.</p>
+              <button
+                onClick={() => refetch()}
+                style={{ marginTop: "0.75rem", padding: "0.4rem 1rem", background: "var(--color-primary)", color: "#fff", border: "none", borderRadius: "6px", cursor: "pointer", fontSize: "0.875rem" }}
+              >
+                Retry
+              </button>
             </div>
           ) : (
             <>
@@ -286,34 +304,27 @@ const Dashboard = () => {
                 icon="📦"
                 title="Total Products"
                 value={stats?.products?.total ?? 0}
-                subtitle={`${stats?.products?.active ?? 0} active`}
+                subtitle={(stats?.products?.active ?? 0) + " active"}
                 color="primary"
               />
-
               <StatCard
                 icon="✅"
                 title="Active Products"
                 value={stats?.products?.active ?? 0}
-                subtitle={`${stats?.products?.draft ?? 0} drafts`}
+                subtitle={(stats?.products?.draft ?? 0) + " drafts"}
                 color="success"
               />
-
               <StatCard
                 icon="🧩"
                 title="Page Sections"
                 value={stats?.sections?.total ?? 0}
-                subtitle={`${stats?.sections?.visible ?? 0} visible`}
+                subtitle={(stats?.sections?.visible ?? 0) + " visible"}
                 color="purple"
               />
-
               <StatCard
                 icon="👁️"
                 title="Page Views"
-                value={
-                  stats?.pageViews
-                    ? stats.pageViews.toLocaleString()
-                    : "0"
-                }
+                value={stats?.pageViews ? stats.pageViews.toLocaleString() : "0"}
                 subtitle="Total all time"
                 color="warning"
               />
@@ -324,14 +335,13 @@ const Dashboard = () => {
 
       {/* ── Secondary Stats ──────────────── */}
       {stats && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
           <StatCard
             icon="⭐"
             title="Featured Products"
             value={stats.products?.featured ?? 0}
             color="warning"
           />
-
           <StatCard
             icon="⚠️"
             title="Out of Stock"
@@ -339,7 +349,6 @@ const Dashboard = () => {
             subtitle="Needs attention"
             color="error"
           />
-
           <StatCard
             icon="🙈"
             title="Hidden Sections"
@@ -351,75 +360,64 @@ const Dashboard = () => {
       )}
 
       {/* ── Bottom Grid ─────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
 
         {/* Quick Actions */}
-        <div className="card">
-          <h3 className="font-semibold text-text-primary mb-4">
+        <div style={{ background: "var(--color-background)", border: "1px solid var(--color-border)", borderRadius: "12px", padding: "1.25rem" }}>
+          <h3 style={{ fontSize: "1rem", fontWeight: "600", color: "var(--color-text-primary)", marginBottom: "1rem" }}>
             Quick Actions
           </h3>
-          <div className="space-y-3">
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             <QuickAction
               icon="📦"
               label="Add New Product"
               description="Create and publish a product"
               color="blue"
-              onClick={() =>
-                window.location.href = "/admin/products/new"
-              }
+              onClick={() => window.location.href = "/admin/products/new"}
             />
-
             <QuickAction
               icon="🧩"
               label="Manage Sections"
               description="Edit homepage sections"
               color="purple"
-              onClick={() =>
-                window.location.href = "/admin/sections"
-              }
+              onClick={() => window.location.href = "/admin/sections"}
             />
-
             <QuickAction
               icon="🎨"
               label="Change Theme"
               description="Switch or customize theme"
               color="green"
-              onClick={() =>
-                window.location.href = "/admin/themes"
-              }
+              onClick={() => window.location.href = "/admin/themes"}
             />
-
             {isAdminOrAbove && (
               <QuickAction
                 icon="🏢"
                 label="Add New Client"
                 description="Onboard a new client"
                 color="orange"
-                onClick={() =>
-                  window.location.href = "/admin/clients/new"
-                }
+                onClick={() => window.location.href = "/admin/clients/new"}
               />
             )}
           </div>
         </div>
 
         {/* Category Breakdown */}
-        <div className="card">
-          <h3 className="font-semibold text-text-primary mb-4">
+        <div style={{ background: "var(--color-background)", border: "1px solid var(--color-border)", borderRadius: "12px", padding: "1.25rem" }}>
+          <h3 style={{ fontSize: "1rem", fontWeight: "600", color: "var(--color-text-primary)", marginBottom: "1rem" }}>
             Products by Category
           </h3>
 
           {isStatsLoading ? (
-            <div className="space-y-4">
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="space-y-2">
-                  <SkeletonBox className="h-4 w-full" />
-                  <SkeletonBox className="h-2 w-full rounded-full" />
+                <div key={i}>
+                  <SkeletonBox style={{ height: "0.875rem", width: "100%", marginBottom: "0.375rem", borderRadius: "4px" }} />
+                  <SkeletonBox style={{ height: "0.5rem", width: "100%", borderRadius: "999px" }} />
                 </div>
               ))}
             </div>
           ) : stats?.topCategories?.length > 0 ? (
-            <div className="space-y-4">
+            <div>
               {stats.topCategories.map((cat) => (
                 <CategoryBar
                   key={cat.category}
@@ -430,9 +428,9 @@ const Dashboard = () => {
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-text-secondary">
-              <p className="text-3xl mb-2">📊</p>
-              <p className="text-sm">
+            <div style={{ textAlign: "center", padding: "2rem", color: "var(--color-text-secondary)" }}>
+              <p style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>📊</p>
+              <p style={{ fontSize: "0.875rem" }}>
                 No products yet. Add products to see breakdown.
               </p>
             </div>
@@ -440,52 +438,57 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* ── Client Details (admin+) ──────── */}
+      {/* ── Client Details — admin+ ──────── */}
       {isAdminOrAbove && client && (
-        <div className="card">
-          <h3 className="font-semibold text-text-primary mb-4">
+        <div style={{ background: "var(--color-background)", border: "1px solid var(--color-border)", borderRadius: "12px", padding: "1.25rem" }}>
+          <h3 style={{ fontSize: "1rem", fontWeight: "600", color: "var(--color-text-primary)", marginBottom: "1rem" }}>
             Client Details
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2
-                          lg:grid-cols-4 gap-4 text-sm">
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem" }}>
 
             <div>
-              <p className="text-text-secondary mb-1">Business Type</p>
-              <p className="font-medium text-text-primary capitalize">
+              <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", marginBottom: "0.25rem" }}>
+                Business Type
+              </p>
+              <p style={{ fontSize: "0.875rem", fontWeight: "500", color: "var(--color-text-primary)", textTransform: "capitalize" }}>
                 {client.businessType || "—"}
               </p>
             </div>
 
             <div>
-              <p className="text-text-secondary mb-1">Slug</p>
-              <p className="font-medium text-text-primary font-mono
-                            text-xs bg-surface px-2 py-1 rounded">
+              <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", marginBottom: "0.25rem" }}>
+                Slug
+              </p>
+              <p style={{ fontSize: "0.8rem", fontWeight: "500", color: "var(--color-text-primary)", fontFamily: "monospace", background: "var(--color-surface)", padding: "2px 8px", borderRadius: "4px", display: "inline-block" }}>
                 {client.slug}
               </p>
             </div>
 
             <div>
-              <p className="text-text-secondary mb-1">Custom Domain</p>
-              <p className="font-medium text-text-primary">
+              <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", marginBottom: "0.25rem" }}>
+                Custom Domain
+              </p>
+              <p style={{ fontSize: "0.875rem", fontWeight: "500", color: "var(--color-text-primary)" }}>
                 {client.customDomain || "Not set"}
               </p>
             </div>
 
             <div>
-              <p className="text-text-secondary mb-1">Created</p>
-              <p className="font-medium text-text-primary">
-                {client.createdAt
-                  ? formatDate(client.createdAt)
-                  : "—"
-                }
+              <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", marginBottom: "0.25rem" }}>
+                Created
+              </p>
+              <p style={{ fontSize: "0.875rem", fontWeight: "500", color: "var(--color-text-primary)" }}>
+                {client.createdAt ? formatDate(client.createdAt) : "—"}
               </p>
             </div>
 
             {client.contact?.email && (
               <div>
-                <p className="text-text-secondary mb-1">Contact Email</p>
-                <p className="font-medium text-text-primary">
+                <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", marginBottom: "0.25rem" }}>
+                  Contact Email
+                </p>
+                <p style={{ fontSize: "0.875rem", fontWeight: "500", color: "var(--color-text-primary)" }}>
                   {client.contact.email}
                 </p>
               </div>
@@ -493,31 +496,33 @@ const Dashboard = () => {
 
             {client.contact?.phone && (
               <div>
-                <p className="text-text-secondary mb-1">Phone</p>
-                <p className="font-medium text-text-primary">
+                <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", marginBottom: "0.25rem" }}>
+                  Phone
+                </p>
+                <p style={{ fontSize: "0.875rem", fontWeight: "500", color: "var(--color-text-primary)" }}>
                   {client.contact.phone}
                 </p>
               </div>
             )}
 
             <div>
-              <p className="text-text-secondary mb-1">Plan Expiry</p>
-              <p className="font-medium text-text-primary">
-                {client.planExpiry
-                  ? formatDate(client.planExpiry)
-                  : "No expiry"
-                }
+              <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", marginBottom: "0.25rem" }}>
+                Plan Expiry
+              </p>
+              <p style={{ fontSize: "0.875rem", fontWeight: "500", color: "var(--color-text-primary)" }}>
+                {client.planExpiry ? formatDate(client.planExpiry) : "No expiry"}
               </p>
             </div>
 
             <div>
-              <p className="text-text-secondary mb-1">Maintenance</p>
-              <Badge variant={
-                client.isUnderMaintenance ? "warning" : "success"
-              }>
+              <p style={{ fontSize: "0.75rem", color: "var(--color-text-secondary)", marginBottom: "0.25rem" }}>
+                Maintenance
+              </p>
+              <Badge variant={client.isUnderMaintenance ? "warning" : "success"}>
                 {client.isUnderMaintenance ? "ON" : "OFF"}
               </Badge>
             </div>
+
           </div>
         </div>
       )}
@@ -527,5 +532,3 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
-
-// test update
