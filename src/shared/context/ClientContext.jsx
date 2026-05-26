@@ -1,4 +1,4 @@
- import {
+import {
   createContext,
   useContext,
   useState,
@@ -9,38 +9,71 @@ import clientService     from "@services/clientService.js";
 import themeService      from "@services/themeService.js";
 import { setClientSlug } from "@services/apiClient.js";
 
-// ─────────────────────────────────────────
-// CONTEXT
-// ─────────────────────────────────────────
-
 const ClientContext = createContext(null);
 
 // ─────────────────────────────────────────
-// HELPER — Detect client slug from URL
+// VALIDATE SLUG — domain name nahi hona chahiye
+// ─────────────────────────────────────────
+
+const isValidClientSlug = (slug) => {
+  if (!slug) return false;
+  if (slug.includes("."))        return false; // Domain names have dots
+  if (slug.includes("vercel"))   return false;
+  if (slug.includes("onrender")) return false;
+  if (slug.includes("localhost")) return false;
+  if (slug.length > 60)          return false;
+  if (slug.length < 2)           return false;
+  return true;
+};
+
+// ─────────────────────────────────────────
+// DETECT CLIENT SLUG FROM URL
 // ─────────────────────────────────────────
 
 const detectClientSlug = () => {
   const hostname       = window.location.hostname;
   const platformDomain = import.meta.env.VITE_PLATFORM_DOMAIN || "youragency.com";
 
-  // Strategy 1 — Subdomain
-  if (hostname.endsWith(`.${platformDomain}`)) {
+  // Strategy 1 — Real subdomain only
+  // acme.youragency.com → "acme"
+  // NOT: freelancer-client-seven.vercel.app
+  if (
+    hostname.endsWith(`.${platformDomain}`) &&
+    !hostname.includes("vercel.app") &&
+    !hostname.includes("netlify.app") &&
+    !hostname.includes("localhost")
+  ) {
     const subdomain = hostname
       .replace(`.${platformDomain}`, "")
       .toLowerCase();
-    if (subdomain && subdomain !== "www" && subdomain !== "admin") {
+
+    if (
+      subdomain &&
+      subdomain !== "www" &&
+      subdomain !== "admin" &&
+      isValidClientSlug(subdomain)
+    ) {
       return subdomain;
     }
   }
 
-  // Strategy 2 — Query param
+  // Strategy 2 — ?client= query param
   const params      = new URLSearchParams(window.location.search);
   const clientParam = params.get("client");
-  if (clientParam) return clientParam;
+  if (clientParam && isValidClientSlug(clientParam)) {
+    return clientParam;
+  }
 
-  // Strategy 3 — localStorage
+  // Strategy 3 — localStorage (validated)
   const stored = localStorage.getItem("clientSlug");
-  if (stored) return stored;
+  if (stored && isValidClientSlug(stored)) {
+    return stored;
+  }
+
+  // Clear invalid stored slug
+  if (stored && !isValidClientSlug(stored)) {
+    localStorage.removeItem("clientSlug");
+  }
 
   return null;
 };
@@ -51,12 +84,12 @@ const detectClientSlug = () => {
 
 export const ClientProvider = ({ children }) => {
 
-  const [client,        setClient]        = useState(null);
-  const [theme,         setTheme]         = useState(null);
-  const [clientSlug,    setClientSlugState] = useState(null);
-  const [isLoading,     setIsLoading]     = useState(false);
-  const [error,         setError]         = useState(null);
-  const [themeApplied,  setThemeApplied]  = useState(false);
+  const [client,       setClient]         = useState(null);
+  const [theme,        setTheme]          = useState(null);
+  const [clientSlug,   setClientSlugState] = useState(null);
+  const [isLoading,    setIsLoading]      = useState(false);
+  const [error,        setError]          = useState(null);
+  const [themeApplied, setThemeApplied]   = useState(false);
 
   // ─────────────────────────────────────────
   // LOAD BY SLUG
@@ -65,12 +98,19 @@ export const ClientProvider = ({ children }) => {
   const loadClientConfig = useCallback(async (slug) => {
     if (!slug) return;
 
+    // ⚠️ Validate — domain name ko slug mat samjho
+    if (!isValidClientSlug(slug)) {
+      console.warn("Skipping invalid slug:", slug);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
       setClientSlug(slug);
       setClientSlugState(slug);
+      localStorage.setItem("clientSlug", slug);
 
       const response = await clientService.getConfig(slug);
 
@@ -96,6 +136,7 @@ export const ClientProvider = ({ children }) => {
       }
     } catch (err) {
       setError(err.message || "Failed to load client config");
+      console.error("loadClientConfig error:", err);
     } finally {
       setIsLoading(false);
     }
@@ -117,8 +158,12 @@ export const ClientProvider = ({ children }) => {
       if (response?.data) {
         const clientData = response.data;
         setClient(clientData);
-        setClientSlugState(clientData.slug);
-        setClientSlug(clientData.slug);
+
+        if (clientData.slug && isValidClientSlug(clientData.slug)) {
+          setClientSlugState(clientData.slug);
+          setClientSlug(clientData.slug);
+          localStorage.setItem("clientSlug", clientData.slug);
+        }
 
         if (clientData.theme) {
           setTheme(clientData.theme);
@@ -132,7 +177,7 @@ export const ClientProvider = ({ children }) => {
         }
       }
     } catch (err) {
-      console.error("Client load by ID failed:", err);
+      console.error("loadClientById error:", err);
       setError(err.message || "Failed to load client");
     } finally {
       setIsLoading(false);
@@ -145,31 +190,32 @@ export const ClientProvider = ({ children }) => {
 
   useEffect(() => {
     const initClient = async () => {
-      // Strategy 1 — URL se slug detect karo
+      // Strategy 1 — URL se valid slug detect karo
       const slugFromUrl = detectClientSlug();
       if (slugFromUrl) {
         await loadClientConfig(slugFromUrl);
         return;
       }
 
-      // Strategy 2 — localStorage se user check karo
+      // Strategy 2 — Logged in user ka client
       try {
         const storedUser = localStorage.getItem("user");
         if (storedUser) {
           const parsedUser = JSON.parse(storedUser);
 
-          // User ke saath client linked hai
           if (parsedUser?.client) {
             const clientObj = parsedUser.client;
 
-            if (typeof clientObj === "object" && clientObj.slug) {
-              // Populated object — slug directly hai
+            if (typeof clientObj === "object" && clientObj.slug && isValidClientSlug(clientObj.slug)) {
+              // Populated — slug directly available
               await loadClientConfig(clientObj.slug);
             } else if (typeof clientObj === "object" && clientObj._id) {
-              // Object with _id — ID se load karo
+              // Object with _id
               await loadClientById(clientObj._id);
-            } else if (typeof clientObj === "string") {
-              // Plain ObjectId string
+            } else if (
+              typeof clientObj === "string" &&
+              clientObj.length === 24  // MongoDB ObjectId
+            ) {
               await loadClientById(clientObj);
             }
           }
@@ -217,9 +263,9 @@ export const ClientProvider = ({ children }) => {
     isLoading,
     error,
     themeApplied,
-    clientId:   client?._id   || null,
-    clientName: client?.name  || "",
-    logo:       client?.logo  || null,
+    clientId:   client?._id    || null,
+    clientName: client?.name   || "",
+    logo:       client?.logo   || null,
     contact:    client?.contact || {},
     social:     client?.social  || {},
     seo:        client?.seo     || {},
